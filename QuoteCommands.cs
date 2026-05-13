@@ -123,12 +123,24 @@ public class QuoteCommands : BaseCommandModule
     {
         Console.WriteLine("quoting by username");
 
-        var targetUserId = ctx.Guild.Members.First(m => 
-            m.Value.DisplayName.ToLowerInvariant().Equals(arg) || 
-            m.Value.Username.ToLowerInvariant().Equals(arg) ||
-            (m.Value.GlobalName?.ToLowerInvariant().Equals(arg) ?? false) ||
-            m.Value.Nickname.ToLowerInvariant().Equals(arg)
-        ).Key;
+        ulong targetUserId = 0;
+        try
+        {
+            targetUserId = ctx.Guild.Members.First(m => 
+                m.Value.DisplayName.ToLowerInvariant().Equals(arg) || 
+                m.Value.Username.ToLowerInvariant().Equals(arg) ||
+                (m.Value.GlobalName?.ToLowerInvariant().Equals(arg) ?? false) ||
+                (m.Value.Nickname?.ToLowerInvariant().Equals(arg) ?? false)
+            ).Key;
+        }
+        catch (InvalidOperationException ioe)
+        {
+            Console.WriteLine(ioe.Message);
+            Console.WriteLine(ioe.StackTrace);
+            await ctx.Channel.SendMessageAsync("User not found");
+            return false;
+        }
+         
         
         long quoteId = await UsernameQuote(targetUserId);
         Console.WriteLine(quoteId);
