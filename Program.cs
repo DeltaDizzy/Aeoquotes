@@ -11,6 +11,8 @@ internal class Program
     public static Settings settings {get; private set; } = new Settings(":joy:", "&");
     public record struct Quote(long id, string nick, ulong userId, string channel, ulong channelId, ulong server, string text, ulong messageId, long unixTime, DateTime dateTime);
     public record struct Settings(string reactName = ":joy:", string prefix = "&");
+    private record struct RawQuote(string id, string nick, string userId, string channel, string channelId, string server, string text, string messageId, long unixTime, DateTime dateTime);
+
 
     public static void UpdateSettings(Settings newSettings) => UpdateSettings(newSettings.reactName, newSettings.prefix);
 
@@ -102,11 +104,13 @@ internal class Program
 
     static (List<Quote>, Settings) LoadData()
     {
-        List<Quote>? quotes;
+        
+        List<RawQuote>? rawQuotes = null;
+        List<Quote>? realQuotes = [];
         Settings newSettings;
         try
         {
-            quotes = JsonSerializer.Deserialize<List<Quote>>(File.ReadAllText("quotes.json"));
+            rawQuotes = JsonSerializer.Deserialize<List<RawQuote>>(File.ReadAllText("quotes.json"));
         }
         catch (Exception e)
         {
@@ -124,10 +128,44 @@ internal class Program
             newSettings = new Settings(":joy:", "&");
         }
 
-
-        if (quotes is not null)
+        if (rawQuotes is not null && realQuotes is not null)
         {
-            return (quotes, newSettings);
+            foreach (RawQuote q in rawQuotes)
+            {
+                if(
+                    long.TryParse(q.id, out long quoteId) &&
+                    ulong.TryParse(q.userId, out ulong quoteUserId) &&
+                    ulong.TryParse(q.channelId, out ulong quoteChannelId) &&
+                    ulong.TryParse(q.server, out ulong quoteServerId) &&
+                    ulong.TryParse(q.messageId, out ulong quoteMessageId)
+                )
+                {
+                    realQuotes.Add(
+                        new Quote(
+                            quoteId,
+                            q.nick,
+                            quoteUserId,
+                            q.channel,
+                            quoteChannelId,
+                            quoteServerId,
+                            q.text,
+                            quoteMessageId,
+                            q.unixTime,
+                            q.dateTime
+                        )
+                    );
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to load quote #{q.id}");
+                }
+                
+            }
+        }
+
+        if (realQuotes is not null)
+        {
+            return (realQuotes, newSettings);
         }
         else return ([], newSettings);
     }

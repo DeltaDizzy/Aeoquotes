@@ -53,10 +53,7 @@ public class QuoteCommands : BaseCommandModule
                 case "stats":
                 Console.WriteLine("quoting stats");
                     DiscordEmbed stats = await QuoteStats();
-                    if (stats.Title is not null)
-                    {
-                        await ctx.Channel.SendMessageAsync(stats);
-                    }
+                    await ctx.Channel.SendMessageAsync(stats);
                     break;
                 case "remove":
                 case "delete":
