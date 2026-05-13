@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using DSharpPlus;
-using DSharpPlus.Interactivity;
 
+namespace Aeoquotes;
 internal class Program
 {
     static string token = File.ReadAllLines("token.txt")[0];
@@ -20,6 +20,13 @@ internal class Program
         cmdPrefix = prefix;
         SaveData(quotes, new Settings(reactName, prefix));
     }
+
+    public static void RemoveQuote(long quoteId)
+    {
+        quotes.RemoveAll(q => q.id == quoteId);
+    }
+
+    public static List<Quote> GetQuotes() => quotes;
     private static async Task Main(string[] args)
     {
         (quotes, settings) = LoadData();
