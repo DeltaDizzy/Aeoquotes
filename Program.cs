@@ -6,12 +6,23 @@ internal class Program
 {
     static string token = File.ReadAllLines("token.txt")[0];
     static string quoteReactName = "";
-    record struct Quote(long id, string nick, ulong userId, string channel, ulong channelId, ulong server, string text, ulong messageId, long unixTime, DateTime dateTime);
-    record struct Settings(string reactName, string prefix);
+    static string cmdPrefix = "";
+    static List<Quote> quotes = [];
+    static Settings settings;
+    public record struct Quote(long id, string nick, ulong userId, string channel, ulong channelId, ulong server, string text, ulong messageId, long unixTime, DateTime dateTime);
+    public record struct Settings(string reactName, string prefix);
+
+    public static void UpdateSettings(Settings newSettings) => UpdateSettings(newSettings.reactName, newSettings.prefix);
+
+    public static void UpdateSettings(string reactName, string prefix)
+    {
+        quoteReactName = reactName;
+        cmdPrefix = prefix;
+        SaveData(quotes, new Settings(reactName, prefix));
+    }
     private static async Task Main(string[] args)
     {
-
-        (List<Quote> quotes, Settings settings) = LoadData();
+        (quotes, settings) = LoadData();
         DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(token, DiscordIntents.AllUnprivileged);
         builder.ConfigureEventHandlers((handler) =>
         {
@@ -19,7 +30,7 @@ internal class Program
             {
                 if (args.Message.Reactions.Any(react => react.Emoji.Name.Equals(quoteReactName)))
                 {
-                    if (!quotes.Where(q => q.messageId == args.Message.Id).Any()) // if the subset of the quotes list where the message id matches this message is empty, we havent quoted it yet
+                    if (!quotes.Any(q => q.messageId == args.Message.Id)) // if the subset of the quotes list where the message id matches this message is empty, we havent quoted it yet
                     {
                         quotes.Add(new Quote(
                             quotes.Count + 1,
@@ -44,12 +55,12 @@ internal class Program
         await Task.Delay(-1);
     }
 
-    void SaveData(List<Quote> quotes, Settings settings)
+    static void SaveData(List<Quote> quotes, Settings settings)
     {
         string quotesJson = JsonSerializer.Serialize(quotes);
         string settingsJson = JsonSerializer.Serialize(settings);
-        File.WriteAllText($"quotes.json", quotesJson);
-        File.WriteAllText($"settings.json", settingsJson);
+        File.WriteAllTextAsync($"quotes.json", quotesJson);
+        File.WriteAllTextAsync($"settings.json", settingsJson);
     }
 
     static (List<Quote>, Settings) LoadData()
