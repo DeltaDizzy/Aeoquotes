@@ -122,7 +122,14 @@ public class QuoteCommands : BaseCommandModule
     private async Task<bool> HandleUsernameOrInvalid(CommandContext ctx, string arg)
     {
         Console.WriteLine("quoting by username");
-        var targetUserId = ctx.Guild.Members.First(m => m.Value.DisplayName.ToLowerInvariant().Equals(arg) || m.Value.Username.ToLowerInvariant().Equals(arg)).Key;
+
+        var targetUserId = ctx.Guild.Members.First(m => 
+            m.Value.DisplayName.ToLowerInvariant().Equals(arg) || 
+            m.Value.Username.ToLowerInvariant().Equals(arg) ||
+            (m.Value.GlobalName?.ToLowerInvariant().Equals(arg) ?? false) ||
+            m.Value.Nickname.ToLowerInvariant().Equals(arg)
+        ).Key;
+        
         long quoteId = await UsernameQuote(targetUserId);
         Console.WriteLine(quoteId);
         DiscordEmbed usernameQuote = await QuoteEmbed(quoteId);
