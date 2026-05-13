@@ -33,7 +33,7 @@ internal class Program
     private static async Task Main(string[] args)
     {
         (quotes, settings) = LoadData();
-        DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(token, DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents);
+        DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(token, DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents | DiscordIntents.GuildMembers);
         builder.ConfigureEventHandlers((handler) =>
         {
             handler.HandleMessageReactionAdded(async (client, args) =>
@@ -67,7 +67,7 @@ internal class Program
                                     react => react.Emoji.GetDiscordName().Equals(settings.reactName)
                                 ).Emoji
                             );
-                            await channel.SendMessageAsync($"Quote added as #{quotes.Last().id}");
+                            await channel.SendMessageAsync($"Quote added as #{quotes.Last().id} by {args.User.Username} ({message.JumpLink})");
                             SaveData(quotes, settings);
                             maxQuoteId++;
                         }
