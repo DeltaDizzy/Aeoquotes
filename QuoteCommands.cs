@@ -7,6 +7,20 @@ namespace Aeoquotes;
 
 public class QuoteCommands : BaseCommandModule
 {
+    #region Command Tasks
+    // [Command("help")]
+    // public async Task Help(CommandContext ctx)
+    // {
+    //     StringBuilder descBuilder = new StringBuilder();
+    //     DiscordEmbedBuilder builder = new DiscordEmbedBuilder()
+    //     {
+    //         Title = "AEoTS Quote Bot Help",
+    //         Description = "Command listing for the AEoTS quote bot. Note that for all commands, !q and !quote will have the same result."
+    //     };
+    //     builder.AddField("Leaderboard", "`!quote stats`");
+    //     builder.AddField("Getting Quotes", "* Random quote - `!quote`\n* Random quote from a user - `!quote [username]` (Username or display name works!)\n* A specific quote - `!quote [number]`");
+    // }
+
     [Command("q")]
     public async Task Q(CommandContext ctx, [RemainingText] string args)
     {
@@ -33,69 +47,94 @@ public class QuoteCommands : BaseCommandModule
         {
             Console.WriteLine("quoting by number");
             DiscordEmbed quote = await QuoteEmbed(id);
-            if (quote.Title is not null)
-            {
-                await ctx.Channel.SendMessageAsync(quote);
-            }
+            await ctx.Channel.SendMessageAsync(quote);
         } 
         else
         {
-            switch (cmdargs[0])
+            _ = cmdargs[0] switch
             {
-                case "":
-                    Console.WriteLine("random quote");
-                    DiscordEmbed embed = await RandomQuote();
-                    if (embed.Title is not null)
-                    {
-                        await ctx.Channel.SendMessageAsync(embed);
-                    }
-                    break;
-                case "stats":
-                Console.WriteLine("quoting stats");
-                    DiscordEmbed stats = await QuoteStats();
-                    await ctx.Channel.SendMessageAsync(stats);
-                    break;
-                case "remove":
-                case "delete":
-                    
-                    if (int.TryParse(cmdargs[1], out int quoteToRemove))
-                    {
-                        if (Program.GetQuotes().Count <= quoteToRemove && quoteToRemove > 0)
-                        {
-                            Console.WriteLine($"deleting quote {quoteToRemove}");
-                            // need to remove our reaction
-                            var message = await ctx.Channel.GetMessageAsync(Program.GetQuotes()[quoteToRemove - 1].messageId);
-                            var user = await ctx.Guild.GetMemberAsync(1503994723118088292);
-                            await message.DeleteReactionAsync(message.Reactions.First(r => r.Emoji.GetDiscordName() == Program.settings.reactName).Emoji, user);
-                            RemoveQuote(quoteToRemove);
-                            
-                            await ctx.Channel.SendMessageAsync($"Quote {quoteToRemove} removed!");
-                        }
-                        else
-                        {
-                            await ctx.Channel.SendMessageAsync($"Quote {quoteToRemove} not found");
-                        }
+                "" => HandleRandom(ctx),
+                "stats" => HandleStats(ctx, cmdargs[1]),
+                "remove" or "delete" => HandleDelete(ctx, cmdargs[1]),
+                "latest" => HandleLatest(ctx),
+                string s => HandleUsernameOrInvalid(ctx, s)
 
-                    }
-                    break;
-                default:
-                    // assume arg is a username, so get their id
-                    Console.WriteLine("quoting by username");
-                    var targetUserId = ctx.Guild.Members.First(m => m.Value.DisplayName.ToLowerInvariant().Equals(cmdargs[0]) || m.Value.Username.ToLowerInvariant().Equals(cmdargs[0])).Key;
-                    long quoteId = await UsernameQuote(targetUserId);
-                    Console.WriteLine(quoteId);
-                    DiscordEmbed usernameQuote = await QuoteEmbed(quoteId);
-                    if (usernameQuote.Title is not null)
-                    {
-                        await ctx.Channel.SendMessageAsync(usernameQuote);
-                    }
-                    break;
-            }  
+            };
         }
     }
+#endregion
 
-    void RemoveQuote(int id) => Program.RemoveQuote(id);
+#region Subcommand Handlers
 
+    private async Task<bool> HandleRandom(CommandContext ctx)
+    {
+        Console.WriteLine("random quote");
+        DiscordEmbed embed = await RandomQuote();
+        if (embed.Title is not null)
+        {
+            await ctx.Channel.SendMessageAsync(embed);
+        }
+        return true;
+    }
+
+    private async Task<bool> HandleStats(CommandContext ctx, string user = "")
+    {
+        Console.WriteLine("quoting stats");
+        DiscordEmbed stats = await QuoteStats();
+        await ctx.Channel.SendMessageAsync(stats);
+        return true;
+    }
+
+    private async Task<bool> HandleDelete(CommandContext ctx, string target)
+    {
+        if (long.TryParse(target, out long quoteToRemove))
+        {
+            if (Program.GetQuotes().Count <= quoteToRemove && quoteToRemove > 0)
+            {
+                Console.WriteLine($"deleting quote {quoteToRemove}");
+                // need to remove our reaction
+                var message = await ctx.Channel.GetMessageAsync(Program.GetQuotes().Find(q => q.id == quoteToRemove).messageId);
+                var user = await ctx.Guild.GetMemberAsync(1503994723118088292);
+                // get reaction
+                if (message.Reactions.Any(r => r.Emoji.GetDiscordName() == Program.settings.reactName))
+                {
+                    await message.DeleteReactionAsync(message.Reactions.First(r => r.Emoji.GetDiscordName() == Program.settings.reactName).Emoji, user);
+                }
+                Program.RemoveQuote(quoteToRemove);
+                
+                await ctx.Channel.SendMessageAsync($"Quote {quoteToRemove} removed!");
+            }
+            else
+            {
+                await ctx.Channel.SendMessageAsync($"Quote {quoteToRemove} not found");
+            }
+        }
+        return true;
+    }
+
+    private async Task<bool> HandleLatest(CommandContext ctx)
+    {
+        DiscordEmbed latestEmbed = await QuoteEmbed(Program.maxQuoteId);
+        await ctx.Channel.SendMessageAsync(latestEmbed);
+        return true;
+    }
+
+    private async Task<bool> HandleUsernameOrInvalid(CommandContext ctx, string arg)
+    {
+        Console.WriteLine("quoting by username");
+        var targetUserId = ctx.Guild.Members.First(m => m.Value.DisplayName.ToLowerInvariant().Equals(arg) || m.Value.Username.ToLowerInvariant().Equals(arg)).Key;
+        long quoteId = await UsernameQuote(targetUserId);
+        Console.WriteLine(quoteId);
+        DiscordEmbed usernameQuote = await QuoteEmbed(quoteId);
+        if (usernameQuote.Title is not null)
+        {
+            await ctx.Channel.SendMessageAsync(usernameQuote);
+        }
+        return true;
+    }
+#endregion
+
+#region Embed/Response Generators
     static async Task<DiscordEmbed> QuoteStats()
     {
         // assemble the top 20
@@ -113,7 +152,7 @@ public class QuoteCommands : BaseCommandModule
 
     static async Task<DiscordEmbed> QuoteEmbed(long id)
     {
-        if (id > 0)
+        if (id > 0 && id <= Program.maxQuoteId)
         {
             Program.Quote quote = Program.GetQuotes().Find(q => q.id == id);
             DiscordEmbedBuilder embedBuilder = new();
@@ -123,14 +162,14 @@ public class QuoteCommands : BaseCommandModule
             descBuilder.Append(quote.text + "\n");
             descBuilder.Append($"* <@{quote.userId}> [(Jump)](https://discordapp.com/channels/{quote.server}/{quote.channelId}/{quote.messageId})");
             embedBuilder.Description = descBuilder.ToString();
-            embedBuilder.WithTimestamp(quote.dateTime);
+            embedBuilder.WithTimestamp(quote.dateTime.ToUniversalTime());
             return embedBuilder.Build();
         }
         else
         {
             return new DiscordEmbedBuilder()
             {
-                Title = null
+                Title = "Quote not found!"
             }.Build();
         }
     }
@@ -165,4 +204,5 @@ public class QuoteCommands : BaseCommandModule
         }
         return await QuoteEmbed(-1);
     }
+#endregion
 }

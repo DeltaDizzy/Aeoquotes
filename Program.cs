@@ -8,9 +8,10 @@ internal class Program
 {
     static string token = File.ReadAllLines("token.txt")[0];
     static List<Quote> quotes = [];
-    public static Settings settings {get; private set; } = new Settings(":joy:", "&");
+    public static long maxQuoteId = 0;
+    public static Settings settings {get; private set; } = new Settings(":thought_balloon:", "&");
     public record struct Quote(long id, string nick, ulong userId, string channel, ulong channelId, ulong server, string text, ulong messageId, long unixTime, DateTime dateTime);
-    public record struct Settings(string reactName = ":joy:", string prefix = "&");
+    public record struct Settings(string reactName = ":thought_balloon:", string prefix = "&");
     private record struct RawQuote(string id, string nick, string userId, string channel, string channelId, string server, string text, string messageId, long unixTime, DateTime dateTime);
 
 
@@ -49,7 +50,7 @@ internal class Program
                         {
                             DiscordMember author = await channel.Guild.GetMemberAsync(message.Author.Id);
                                 quotes.Add(new Quote(
-                                    quotes.Count + 1,
+                                    quotes.Last().id + 1,
                                     author.DisplayName,
                                     author.Id,
                                     channel.Name,
@@ -58,7 +59,7 @@ internal class Program
                                     message.Content,
                                     message.Id,
                                     message.CreationTimestamp.ToUnixTimeSeconds(),
-                                    new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(message.CreationTimestamp.ToUnixTimeSeconds())
+                                    new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(message.CreationTimestamp.ToUnixTimeSeconds()).ToUniversalTime()
                                 )
                             );
                             await message.CreateReactionAsync(
@@ -66,8 +67,9 @@ internal class Program
                                     react => react.Emoji.GetDiscordName().Equals(settings.reactName)
                                 ).Emoji
                             );
-                            await channel.SendMessageAsync($"Quote added as #{quotes.Count}");
+                            await channel.SendMessageAsync($"Quote added as #{quotes.Last().id}");
                             SaveData(quotes, settings);
+                            maxQuoteId++;
                         }
                         else
                         {
@@ -110,7 +112,7 @@ internal class Program
         Settings newSettings;
         try
         {
-            rawQuotes = JsonSerializer.Deserialize<List<RawQuote>>(File.ReadAllText("quotes.json"));
+            realQuotes = JsonSerializer.Deserialize<List<Quote>>(File.ReadAllText("quotes.json"));
         }
         catch (Exception e)
         {
@@ -125,7 +127,7 @@ internal class Program
         catch (System.Exception e)
         {
             Console.WriteLine(e.Message);
-            newSettings = new Settings(":joy:", "&");
+            newSettings = new Settings(":thought_balloon:", "&");
         }
 
         if (rawQuotes is not null && realQuotes is not null)
@@ -165,6 +167,7 @@ internal class Program
 
         if (realQuotes is not null)
         {
+            maxQuoteId = realQuotes.Max(q => q.id);
             return (realQuotes, newSettings);
         }
         else return ([], newSettings);
