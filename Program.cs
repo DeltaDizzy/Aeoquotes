@@ -14,7 +14,7 @@ internal class Program
     public record struct Settings(string reactName = ":thought_balloon:", string prefix = "&");
     private record struct RawQuote(string id, string nick, string userId, string channel, string channelId, string server, string text, string messageId, long unixTime, DateTime dateTime);
 
-
+    public static List<DiscordMember> Members {get; private set;} = [];
     public static void UpdateSettings(Settings newSettings) => UpdateSettings(newSettings.reactName, newSettings.prefix);
 
     public static void UpdateSettings(string reactName, string prefix)
@@ -79,6 +79,11 @@ internal class Program
                     }
                 }
             });
+
+            handler.HandleGuildMemberAdded(async (client, args) =>
+            {
+                Members.Add(args.Member);
+            });
         });
         builder = builder.UseCommandsNext((cnb) =>
             {
@@ -93,6 +98,12 @@ internal class Program
         DiscordClient discord = builder.Build();
         await discord.ConnectAsync();
         Console.WriteLine("Connected!");
+        var aots = await discord.GetGuildAsync(933937980224196608);
+        var members = aots.GetAllMembersAsync();
+        await foreach (var user in members)
+        {
+            Members.Add(user);
+        }
         await Task.Delay(-1);
     }
 

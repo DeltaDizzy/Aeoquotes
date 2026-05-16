@@ -54,7 +54,7 @@ public class QuoteCommands : BaseCommandModule
             _ = cmdargs[0] switch
             {
                 "" => HandleRandom(ctx),
-                "stats" => HandleStats(ctx, cmdargs[1]),
+                "stats" => HandleStats(ctx),
                 "remove" or "delete" => HandleDelete(ctx, cmdargs[1]),
                 "latest" => HandleLatest(ctx),
                 string s => HandleUsernameOrInvalid(ctx, s)
@@ -79,7 +79,7 @@ public class QuoteCommands : BaseCommandModule
 
     private async Task<bool> HandleStats(CommandContext ctx, string user = "")
     {
-        Console.WriteLine("quoting stats");
+        Console.WriteLine($"quoting stats: user={user}");
         DiscordEmbed stats = await QuoteStats();
         await ctx.Channel.SendMessageAsync(stats);
         return true;
@@ -122,16 +122,12 @@ public class QuoteCommands : BaseCommandModule
     private async Task<bool> HandleUsernameOrInvalid(CommandContext ctx, string arg)
     {
         Console.WriteLine("quoting by username");
+        var name = arg.ToLowerInvariant();
 
-        ulong targetUserId = 0;
+        ulong? targetUserId = 0;
         try
         {
-            targetUserId = ctx.Guild.Members.First(m => 
-                m.Value.DisplayName.ToLowerInvariant().Equals(arg) || 
-                m.Value.Username.ToLowerInvariant().Equals(arg) ||
-                (m.Value.GlobalName?.ToLowerInvariant().Equals(arg) ?? false) ||
-                (m.Value.Nickname?.ToLowerInvariant().Equals(arg) ?? false)
-            ).Key;
+            targetUserId = TargetUserIdFromName(name);
         }
         catch (InvalidOperationException ioe)
         {
@@ -140,16 +136,56 @@ public class QuoteCommands : BaseCommandModule
             await ctx.Channel.SendMessageAsync("User not found");
             return false;
         }
-         
-        
-        long quoteId = await UsernameQuote(targetUserId);
-        Console.WriteLine(quoteId);
-        DiscordEmbed usernameQuote = await QuoteEmbed(quoteId);
-        if (usernameQuote.Title is not null)
+        catch (NameScenarioInvalidException nsi)
         {
-            await ctx.Channel.SendMessageAsync(usernameQuote);
+            Console.WriteLine(nsi.Message);
+            Console.WriteLine(nsi.StackTrace);
+            await ctx.Channel.SendMessageAsync("User not found");
+            return false;
         }
-        return true;
+         
+        if (targetUserId is not null)
+        {
+            long quoteId = await UsernameQuote(targetUserId.Value);
+            Console.WriteLine(quoteId);
+            DiscordEmbed usernameQuote = await QuoteEmbed(quoteId);
+            if (usernameQuote.Title is not null)
+            {
+                await ctx.Channel.SendMessageAsync(usernameQuote);
+            }
+            return true;
+        } 
+        else
+        {
+            Console.WriteLine("User Not Found (targetUserId is null)");
+            await ctx.Channel.SendMessageAsync("User not found!");
+            return false;
+        }
+
+    }
+
+    private ulong? TargetUserIdFromName(string name)
+    {
+        // check nickname, then display name, then username
+        // 3 case: nobody with this nickname, one person with this nickname, multiple people with this nickname
+        ulong? targetUserId = Program.Members.Count(m => m.Nickname.Equals(name)) switch
+            {
+                <0 => throw new NameScenarioInvalidException("A negative number of users have this nickname!", NameScenario.NegativeCount, NameType.Nickname),
+                1 => Program.Members.Find(m => m.Nickname.Equals(name))?.Id,
+                >1 or 0 => Program.Members.Count(m => m.DisplayName.Equals(name)) switch
+                {
+                    <0 => throw new NameScenarioInvalidException("A negative number of users have this display name!", NameScenario.NegativeCount, NameType.DisplayName),
+                    1 => Program.Members.Find(m => m.DisplayName.Equals(name))?.Id,
+                    >1 or 0 => Program.Members.Count(m => m.Username.Equals(name)) switch
+                    {
+                        <0 => throw new NameScenarioInvalidException("A negative number of users have this username!", NameScenario.NegativeCount, NameType.Username),
+                        0 => Program.GetQuotes().Find(q => q.nick.ToLowerInvariant().Equals(name)).userId,
+                        1 => Program.Members.Find(m => m.Username.Equals(name))?.Id,
+                        >1 => throw new NameScenarioInvalidException("Multiple number users have this username!", NameScenario.MultipleUsers, NameType.Username)
+                    }
+                }
+            };
+        return targetUserId;
     }
 #endregion
 
