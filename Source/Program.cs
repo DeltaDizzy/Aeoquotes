@@ -12,27 +12,11 @@ internal class Program
     static readonly string token = File.ReadAllLines($"{GetProjectRoot()}/token.txt")[0];
     static List<Quote> quotes = [];
     public static long maxQuoteId = 0;
-
     public static QuotesContext? Database {get; private set;}
-
     public static string emojiName = ":thought_balloon:";
-    private record struct RawQuote(string id, string nick, string userId, string channel, string channelId, string server, string text, string messageId, long unixTime, DateTime dateTime);
-
     public static List<DiscordMember> Members {get; private set;} = [];
-   
-    public static void RemoveQuote(long quoteId)
-    {
-        Quote? toRemove = quotes.Find(q => q.id == quoteId);
-        if (toRemove is not null)
-        {
-            quotes.Remove(toRemove);
-            var removed = Database?.Remove(toRemove);
-        }
-    }
-
-
-
     public static List<Quote> GetQuotes() => quotes;
+
     private static async Task Main(string[] args)
     {
         using (QuotesContext migratordb = new())
@@ -151,55 +135,14 @@ internal class Program
         throw new DirectoryNotFoundException("Could not find the project root directory containing a .csproj file.");
     }
 
-    static async Task<List<Quote>> FixupData(List<Quote> quotes, DiscordGuild guild)
-    {   
-        var channels = await guild.GetChannelsAsync();
-        List<Quote> newQuotes = [];
-
-        string GetChannelName(ulong id)
+    public static void RemoveQuote(long quoteId)
+    {
+        Quote? toRemove = quotes.Find(q => q.id == quoteId);
+        if (toRemove is not null)
         {
-            foreach (DiscordChannel channel in channels)
-            {
-                if (channel.Id == id)
-                {
-                    return channel.Name;
-                }
-                else
-                {
-                    if (channel.Type is DiscordChannelType.Text && !channel.IsThread)
-                    {
-                        if (channel.Threads.Any(t => t.Id == id))
-                        {
-                            return $"{channel.Name}: {channel.Threads.First(t => t.Id == id).Name}";
-                        }
-                    }
-                }
-            }
-            return "Unknown";
+            quotes.Remove(toRemove);
+            var removed = Database?.Remove(toRemove);
+            Database?.SaveChanges();
         }
-
-        foreach (Quote quote in quotes)
-        {
-            if (quote.channel is null)
-            {
-                newQuotes.Add(new Quote(
-                    quote.id, 
-                    quote.nick, 
-                    quote.userId, 
-                    GetChannelName(quote.channelId), 
-                    quote.channelId, 
-                    quote.server, 
-                    quote.text, 
-                    quote.messageId, 
-                    quote.unixTime, 
-                    quote.dateTime
-                ));
-            } 
-            else
-            {
-                newQuotes.Add(quote);
-            }
-        }
-        return newQuotes;
     }
 }
