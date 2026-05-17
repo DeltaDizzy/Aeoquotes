@@ -1,4 +1,5 @@
 bin/
 obj/
+debug-outputs/
 .vscode/settings.json
 token.txt

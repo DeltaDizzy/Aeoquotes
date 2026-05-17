@@ -1,7 +1,3 @@
-using FileContextCore;
-using FileContextCore.FileManager;
-using FileContextCore.Serializer;
-using FileContextCore.Storage;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aeoquotes;
@@ -13,7 +9,7 @@ public class QuotesContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // We are using JSON for now
-        optionsBuilder.UseFileContextDatabase<JSONSerializer, DefaultFileManager>(databaseName: "quotes", location: "quotes_db");
+        optionsBuilder.UseSqlite(@$"Data Source={Program.GetProjectRoot()}/DB/quotes.db");
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
