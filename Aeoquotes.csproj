@@ -10,6 +10,8 @@
   <ItemGroup>
     <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02587" />
     <PackageReference Include="DSharpPlus.CommandsNext" Version="5.0.0-nightly-02587" />
+    <PackageReference Include="FileContextCore" Version="3.4.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3" />
   </ItemGroup>
 
 </Project>

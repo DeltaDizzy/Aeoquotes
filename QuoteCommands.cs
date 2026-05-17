@@ -94,12 +94,18 @@ public class QuoteCommands : BaseCommandModule
             {
                 Console.WriteLine($"deleting quote {quoteToRemove}");
                 // need to remove our reaction
-                var message = await ctx.Channel.GetMessageAsync(Program.GetQuotes().Find(q => q.id == quoteToRemove).messageId);
+                Quote? quote = Program.GetQuotes().Find(q => q.id == quoteToRemove);
+                if (quote is null)
+                {
+                    await ctx.Channel.SendMessageAsync("Quote not found");
+                    return false;
+                }
+                var message = await ctx.Channel.GetMessageAsync(quote.messageId);
                 var user = await ctx.Guild.GetMemberAsync(AEOTS_SERVER_ID);
                 // get reaction
-                if (message.Reactions.Any(r => r.Emoji.GetDiscordName() == Program.settings.reactName))
+                if (message.Reactions.Any(r => r.Emoji.GetDiscordName() == Program.emojiName))
                 {
-                    await message.DeleteReactionAsync(message.Reactions.First(r => r.Emoji.GetDiscordName() == Program.settings.reactName).Emoji, user);
+                    await message.DeleteReactionAsync(message.Reactions.First(r => r.Emoji.GetDiscordName() == Program.emojiName).Emoji, user);
                 }
                 Program.RemoveQuote(quoteToRemove);
                 
@@ -220,7 +226,7 @@ public class QuoteCommands : BaseCommandModule
     {
         if (id > 0 && id <= Program.maxQuoteId)
         {
-            Program.Quote quote = Program.GetQuotes().Find(q => q.id == id);
+            Quote quote = Program.GetQuotes().Find(q => q.id == id);
             DiscordEmbedBuilder embedBuilder = new();
             StringBuilder listBuilder = new();
             embedBuilder.Title = $"#{quote.id}";
