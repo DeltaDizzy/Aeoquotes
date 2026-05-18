@@ -8,7 +8,6 @@ public class QuotesContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        // We are using JSON for now
         optionsBuilder.UseSqlite(@$"Data Source={Program.GetProjectRoot()}/Database/quotes.db");
     }
 
