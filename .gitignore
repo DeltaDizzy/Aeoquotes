@@ -3,3 +3,6 @@ obj/
 debug-outputs/
 .vscode/settings.json
 token.txt
+/.vs
+*.user
+*.pubxml
