@@ -3,6 +3,7 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using log4net;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aeoquotes;
 
@@ -230,6 +231,16 @@ public class QuoteCommands : BaseCommandModule
         if (id > 0 && id <= Program.maxQuoteId)
         {
             Quote? quote = Program.GetQuotes().Find(q => q.id == id);
+
+            if(quote is null)
+            {
+                return new DiscordEmbedBuilder()
+                {
+                    Title = $"#{id} - Error",
+                    Description = "**QUOTE IS NULL**"
+                };
+            }
+
             DiscordEmbedBuilder embedBuilder = new();
             StringBuilder listBuilder = new();
             embedBuilder.Title = $"#{quote?.id}";
