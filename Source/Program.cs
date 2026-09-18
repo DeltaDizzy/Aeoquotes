@@ -125,8 +125,7 @@ internal class Program
 
     public static string GetProjectRoot()
     {
-        FileInfo assemblyLoc = new FileInfo(Assembly.GetExecutingAssembly().Location);
-        string projectRoot = assemblyLoc.FullName;
+        string projectRoot = System.IO.Directory.GetCurrentDirectory();
 
         Logger.Info($"Assuming root folder is {projectRoot}");
 
