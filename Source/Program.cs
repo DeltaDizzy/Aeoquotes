@@ -125,7 +125,12 @@ internal class Program
 
     public static string GetProjectRoot()
     {
-        return new FileInfo(Assembly.GetExecutingAssembly().Location).Directory.FullName;    
+        FileInfo assemblyLoc = new FileInfo(Assembly.GetExecutingAssembly().Location);
+        string projectRoot = assemblyLoc.FullName;
+
+        Logger.Info($"Assuming root folder is {projectRoot}");
+
+        return projectRoot;
     }
 
     public static void RemoveQuote(long quoteId)
