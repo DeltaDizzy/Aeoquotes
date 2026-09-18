@@ -119,7 +119,13 @@ public class QuoteCommands : BaseCommandModule
 
     private async Task<bool> HandleLatest(CommandContext ctx)
     {
-        DiscordEmbed latestEmbed = await QuoteEmbed(Program.maxQuoteId);
+        Quote? newestQuote = Program.Database?.Quotes.AsNoTracking()
+            .OrderByDescending(q => q.dateTime)
+            .FirstOrDefault();
+
+        Logger.Info($"Latest Quote: maxQuoteId = {Program.maxQuoteId}. Actual newest = {(newestQuote?.id.ToString() ?? "null")}");
+
+        DiscordEmbed latestEmbed = await QuoteEmbed(newestQuote?.id ?? Program.maxQuoteId);
         await ctx.Channel.SendMessageAsync(latestEmbed);
         return true;
     }
