@@ -8,7 +8,9 @@ public class QuotesContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite(@$"Data Source={Program.GetProjectRoot()}/Database/quotes.db");
+        string dbPath = Path.Join(Program.GetProjectRoot(), "Database", "quotes.db");
+
+        optionsBuilder.UseSqlite(@$"Data Source={dbPath}");
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -3,6 +3,7 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using log4net;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aeoquotes;
 
@@ -119,7 +120,13 @@ public class QuoteCommands : BaseCommandModule
 
     private async Task<bool> HandleLatest(CommandContext ctx)
     {
-        DiscordEmbed latestEmbed = await QuoteEmbed(Program.maxQuoteId);
+        Quote? newestQuote = Program.Database?.Quotes.AsNoTracking()
+            .OrderByDescending(q => q.dateTime)
+            .FirstOrDefault();
+
+        Logger.Info($"Latest Quote: maxQuoteId = {Program.maxQuoteId}. Actual newest = {(newestQuote?.id.ToString() ?? "null")}");
+
+        DiscordEmbed latestEmbed = await QuoteEmbed(newestQuote?.id ?? Program.maxQuoteId);
         await ctx.Channel.SendMessageAsync(latestEmbed);
         return true;
     }
@@ -224,6 +231,16 @@ public class QuoteCommands : BaseCommandModule
         if (id > 0 && id <= Program.maxQuoteId)
         {
             Quote? quote = Program.GetQuotes().Find(q => q.id == id);
+
+            if(quote is null)
+            {
+                return new DiscordEmbedBuilder()
+                {
+                    Title = $"#{id} - Error",
+                    Description = "**QUOTE IS NULL**"
+                };
+            }
+
             DiscordEmbedBuilder embedBuilder = new();
             StringBuilder listBuilder = new();
             embedBuilder.Title = $"#{quote?.id}";
