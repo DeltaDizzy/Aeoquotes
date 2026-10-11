@@ -1,14 +1,9 @@
-﻿using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
+﻿using System.Text;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using log4net;
 using log4net.Config;
-using Microsoft.Extensions.Configuration;
 namespace Aeoquotes;
 
 internal class Program
@@ -34,8 +29,6 @@ internal class Program
         maxQuoteId = quotes.Max(q => q.id);
         Logger.Info($"Loaded {db.Quotes.Count()} quotes successfully");
 
-
-        
         DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(File.ReadAllText($"{GetProjectRoot()}/token.txt"), DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents | DiscordIntents.GuildMembers);
         builder.ConfigureEventHandlers((handler) =>
         {
@@ -116,7 +109,6 @@ internal class Program
         Logger.Info("Connected!");
         var aots = await discord.GetGuildAsync(933937980224196608);
         
-        //SaveData(await FixupData(quotes, aots), "uotes.json");
         var members = aots.GetAllMembersAsync();
         await foreach (var user in members)
         {
@@ -143,14 +135,5 @@ internal class Program
             var removed = Database?.Remove(toRemove);
             Database?.SaveChanges();
         }
-    }
-
-    public static async Task AddQuoters(DiscordGuild guild)
-    {
-        
-        // need to add the quoters
-        // sorry discord
-        Regex regex = new(@"Quote added as #(\d+) by (\S+) \(https://discord");
-        
     }
 }
