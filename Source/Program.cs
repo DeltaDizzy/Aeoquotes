@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
@@ -25,18 +26,15 @@ internal class Program
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         XmlConfigurator.Configure(new FileInfo($"{GetProjectRoot()}/log4netconfig.xml"));        
-
-        using (QuotesContext migratordb = new())
-        {
-            //Migrator.OldJsonToEF(@$"{GetProjectRoot()}/quotes.json", migratordb);
-        }
         
         using QuotesContext db = new();
         Database = db;
         Logger.Info($"Database connected: {db.Quotes.Any()}");
         quotes = [.. db.Quotes];
-        maxQuoteId = quotes.Max(q => q.id);;
+        maxQuoteId = quotes.Max(q => q.id);
         Logger.Info($"Loaded {db.Quotes.Count()} quotes successfully");
+
+
         
         DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(File.ReadAllText($"{GetProjectRoot()}/token.txt"), DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents | DiscordIntents.GuildMembers);
         builder.ConfigureEventHandlers((handler) =>
@@ -47,6 +45,8 @@ internal class Program
                 {
                     if (!quotes.Any(q => q.messageId == args.Message.Id)) // if the subset of the quotes list where the message id matches this message is empty, we havent quoted it yet
                     {
+                        // get the quoter
+                        DiscordUser quoter = args.User;
                         // get the message ourselves because a lot of the fields are null
                         DiscordChannel channel = await client.GetChannelAsync(args.Channel.Id);
                         DiscordMessage message = await channel.GetMessageAsync(args.Message.Id);
@@ -63,7 +63,9 @@ internal class Program
                                 message.Content,
                                 message.Id,
                                 message.CreationTimestamp.ToUnixTimeSeconds(),
-                                new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(message.CreationTimestamp.ToUnixTimeSeconds()).ToUniversalTime()
+                                new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(message.CreationTimestamp.ToUnixTimeSeconds()).ToUniversalTime(),
+                                quoter.Username,
+                                quoter.Id
                             );
 
                             quotes.Add(newQuote);
@@ -78,7 +80,7 @@ internal class Program
                                         react => react.Emoji.GetDiscordName().Equals(emojiName)
                                     ).Emoji
                                 );
-                                await channel.SendMessageAsync($"Quote added as #{quotes.Last().id} by {args.User.Username} ({message.JumpLink})");
+                                await channel.SendMessageAsync($"Quote added as #{quotes.Last().id} by {quoter.Username} ({message.JumpLink})");
                             }
                             else
                             {
@@ -89,7 +91,6 @@ internal class Program
                         {
                             Logger.Warn("Author is null!");
                         }
-
                     }
                 }
             });
@@ -114,6 +115,7 @@ internal class Program
         await discord.ConnectAsync();
         Logger.Info("Connected!");
         var aots = await discord.GetGuildAsync(933937980224196608);
+        
         //SaveData(await FixupData(quotes, aots), "uotes.json");
         var members = aots.GetAllMembersAsync();
         await foreach (var user in members)
@@ -141,5 +143,14 @@ internal class Program
             var removed = Database?.Remove(toRemove);
             Database?.SaveChanges();
         }
+    }
+
+    public static async Task AddQuoters(DiscordGuild guild)
+    {
+        
+        // need to add the quoters
+        // sorry discord
+        Regex regex = new(@"Quote added as #(\d+) by (\S+) \(https://discord");
+        
     }
 }

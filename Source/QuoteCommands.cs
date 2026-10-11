@@ -80,7 +80,6 @@ public class QuoteCommands : BaseCommandModule
             Logger.Info($"Generating leaderboard, length={leaderboardLength}");
             stats = await QuoteLeaderboard(leaderboardLength.Value);
         }
-
         await ctx.Channel.SendMessageAsync(stats);
         return true;
     }
@@ -222,7 +221,7 @@ public class QuoteCommands : BaseCommandModule
         {
             listBuilder.Append($"{i + 1}. <@{topQuotes[i].Key}> ({topQuotes[i].Value} quotes)\n");
         }
-        embedBuilder.WithDescription(listBuilder.ToString());
+        embedBuilder.WithDescription($"Total Quotes: {quotes.Count}\n\n{listBuilder}");
         return embedBuilder.Build();
     }
 
