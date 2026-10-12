@@ -5,7 +5,7 @@ using DSharpPlus.Entities;
 using log4net;
 using Microsoft.EntityFrameworkCore;
 
-namespace Aeoquotes;
+namespace Aeoquotes.Commands;
 
 public class QuoteCommands : BaseCommandModule
 {

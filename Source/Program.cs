@@ -4,6 +4,8 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using log4net;
 using log4net.Config;
+using Aeoquotes.Commands;
+
 namespace Aeoquotes;
 
 internal class Program
@@ -104,8 +106,9 @@ internal class Program
         );
 
         DiscordClient discord = builder.Build();
+        DiscordActivity status = new("the quotathon", DiscordActivityType.Watching);
         
-        await discord.ConnectAsync();
+        await discord.ConnectAsync(status, DiscordUserStatus.Online);
         Logger.Info("Connected!");
         var aots = await discord.GetGuildAsync(933937980224196608);
         

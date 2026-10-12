@@ -5,7 +5,7 @@ using DSharpPlus.CommandsNext.Converters;
 using DSharpPlus.CommandsNext.Entities;
 using DSharpPlus.Entities;
 
-namespace Aeoquotes;
+namespace Aeoquotes.Commands;
 
 public class HelpFormatter : BaseHelpFormatter
 {
