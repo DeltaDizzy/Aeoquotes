@@ -6,11 +6,6 @@ namespace Aeoquotes.Commands;
 
 public partial class QuoteCommands
 {
-    protected enum LeaderboardType
-    {
-        Quotee,
-        Quoter
-    }
     static async Task<DiscordEmbed> QuoteLeaderboard(int leaderboardLength, LeaderboardType leaderboardType)
     {
         DiscordEmbedBuilder embedBuilder = new();
@@ -20,15 +15,25 @@ public partial class QuoteCommands
         {
             LeaderboardType.Quotee => quotes.CountBy(q => q.userId).OrderByDescending(kvp => kvp.Value).Take(leaderboardLength).ToList(),
             LeaderboardType.Quoter => quotes.CountBy(q => q.quoterId).OrderByDescending(kvp => kvp.Value).Take(leaderboardLength).ToList(),
+            LeaderboardType.Weekly_Quoted => quotes.Where(q => (DateTime.Now.Date - q.dateTime.Date).Days <= 7).CountBy(q => q.userId).OrderByDescending(kvp => kvp.Value).Take(leaderboardLength).ToList(),
             _ => []
         };
+
+        string title = leaderboardType switch
+        {
+            LeaderboardType.Quotee => $"Top {leaderboardLength} Quoted Users",
+            LeaderboardType.Quoter => $"Top {leaderboardLength} Quoters",
+            LeaderboardType.Weekly_Quoted => $"Top {leaderboardLength} Quoted Users from {DateTime.Now.Subtract(TimeSpan.FromDays(7)).Date:yyyy-MM-dd} to {DateTime.Now.Date:yyyy-MM-dd}",
+            _ => "Error lole"
+        };
+        embedBuilder.WithTitle(title);
         
         for (int i = 0; i < topQuotes.Count; i++)
         {
             listBuilder.Append($"{i + 1}. <@{topQuotes[i].Key}> ({topQuotes[i].Value} quotes)\n");
         }
-        embedBuilder.WithFooter($"Total Quotes: {quotes.Count}\n\n{listBuilder}");
-        embedBuilder.WithDescription($"## Top {leaderboardLength} {(leaderboardType is LeaderboardType.Quotee ? "quoted users" : "quoters")}");
+        embedBuilder.WithFooter($"Total Quotes: {quotes.Count}");
+        embedBuilder.WithDescription($"{listBuilder}");
         return embedBuilder.Build();
     }
 

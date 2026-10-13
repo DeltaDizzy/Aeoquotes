@@ -31,23 +31,16 @@ public partial class QuoteCommands
     private async Task HandleStats(CommandContext ctx, [RemainingText] string? data = null)
     {
         DiscordEmbed stats;
-        int leaderboardLength;
-        if (data is null)
+        int leaderboardLength = 25;
+        LeaderboardType leaderboardType = LeaderboardType.Quotee;
+        if (data is not null)
         {
-            leaderboardLength = 25;   
+            var args = data.Split(" ");
+            leaderboardLength = args.Select(s => int.TryParse(s, out int n) ? n : 25).FirstOrDefault(25);
+            leaderboardType = GetLeaderboardType(args);
         }
-        else
-        {
-            leaderboardLength = data.Split(" ").Select(s => int.TryParse(s, out int n) ? n : 25).FirstOrDefault(25);
-        }
-        if (data.Split(" ").ContainsAny("quoters", "quoter"))
-        {
-            Logger.Info($"Generating quoter leaderboard, length={leaderboardLength}");
-            stats = await QuoteLeaderboard(leaderboardLength, LeaderboardType.Quoter);
-        }
-        // no number after, user stats or base leaderboard
-        Logger.Info($"Generating quotee leaderboard, length={leaderboardLength}");
-        stats = await QuoteLeaderboard(leaderboardLength, LeaderboardType.Quotee);
+        Logger.Info($"Generating leaderboard, length={leaderboardLength}, type = {leaderboardType}");
+        stats = await QuoteLeaderboard(leaderboardLength, leaderboardType);
         await ctx.Channel.SendMessageAsync(stats);
     }
 
@@ -166,39 +159,5 @@ public partial class QuoteCommands
             return false;
         }
 
-    }
-
-    private ulong? TargetUserIdFromName(string name)
-    {
-        // check nickname, then display name, then username
-        // 3 case: nobody with this nickname, one person with this nickname, multiple people with this nickname
-        ulong? targetUserId = Program.Members.Count(m => (m.Nickname ?? "").ToLowerInvariant().Equals(name)) switch
-            {
-                <0 => throw new NameScenarioInvalidException("A negative number of users have this nickname!", NameScenario.NegativeCount, NameType.Nickname),
-                1 => Program.Members.Find(m => (m.Nickname ?? "").ToLowerInvariant().Equals(name))?.Id,
-                >1 or 0 => Program.Members.Count(m => m.DisplayName.ToLowerInvariant().Equals(name)) switch
-                {
-                    <0 => throw new NameScenarioInvalidException("A negative number of users have this display name!", NameScenario.NegativeCount, NameType.DisplayName),
-                    1 => Program.Members.Find(m => m.DisplayName.ToLowerInvariant().Equals(name))?.Id,
-                    >1 or 0 => Program.Members.Count(m => m.Username.ToLowerInvariant().Equals(name)) switch
-                    {
-                        <0 => throw new NameScenarioInvalidException("A negative number of users have this username!", NameScenario.NegativeCount, NameType.Username),
-                        0 => TryGetUserIdFromQuoteList(name), // no users with this username in the server, so loook through quoes list in case they left
-                        1 => Program.Members.Find(m => m.Username.ToLowerInvariant().Equals(name))?.Id,
-                        >1 => throw new NameScenarioInvalidException("Multiple users have this username!", NameScenario.MultipleUsers, NameType.Username)
-                    }
-                }
-            };
-        return targetUserId;
-    }
-
-    private ulong? TryGetUserIdFromQuoteList(string username)
-    {
-        // look through quotes to see if any attached nicknames match our target username
-        bool quotesHaveName = Program.GetQuotes().Any(q => q.nick.ToLowerInvariant().Equals(username));
-        if (quotesHaveName)
-        {
-            return Program.GetQuotes().Find(q => q.nick.ToLowerInvariant().Equals(username))?.userId;
-        } else throw new NameScenarioInvalidException("No record of this user found in the quote db", NameScenario.ZeroCount, NameType.Nickname);
     }
 }
