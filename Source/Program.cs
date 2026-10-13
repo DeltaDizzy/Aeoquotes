@@ -1,9 +1,13 @@
 ﻿using System.Text;
 using DSharpPlus;
-using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using log4net;
 using log4net.Config;
+using Aeoquotes.Commands;
+using DSharpPlus.Commands;
+using DSharpPlus.Commands.Processors.TextCommands;
+using DSharpPlus.Commands.Processors.TextCommands.Parsing;
+
 namespace Aeoquotes;
 
 internal class Program
@@ -93,19 +97,24 @@ internal class Program
                 Members.Add(args.Member);
             });
         });
-        builder = builder.UseCommandsNext((cnb) =>
+
+        builder.UseCommands((IServiceProvider serviceProvider, CommandsExtension extension) =>
+        {
+            extension.AddCommands([typeof(QuoteCommands)/*, typeof(HelpCommands)*/]);
+            TextCommandProcessor textCommandProcessor = new(new()
             {
-                cnb.RegisterCommands<QuoteCommands>();
-            }, 
-            new CommandsNextConfiguration()
-            {
-                StringPrefixes = ["!"]
-            }
-        );
+               PrefixResolver = new DefaultPrefixResolver(true, "!").ResolvePrefixAsync 
+            });
+            extension.AddProcessor(textCommandProcessor);
+        }, new CommandsConfiguration()
+        {
+            RegisterDefaultCommandProcessors = true
+        });
 
         DiscordClient discord = builder.Build();
+        DiscordActivity status = new("the quotathon", DiscordActivityType.Watching);
         
-        await discord.ConnectAsync();
+        await discord.ConnectAsync(status, DiscordUserStatus.Online);
         Logger.Info("Connected!");
         var aots = await discord.GetGuildAsync(933937980224196608);
         
