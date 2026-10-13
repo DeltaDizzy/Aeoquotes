@@ -17,19 +17,18 @@ public partial class QuoteCommands
     private static readonly ILog Logger = LogManager.GetLogger(typeof(QuoteCommands));
 
     [Command("random")]
-    [TextAlias("")]
-    private async Task<bool> HandleRandom(CommandContext ctx)
+    [DefaultGroupCommand]
+    private async Task HandleRandom(CommandContext ctx)
     {
         DiscordEmbed embed = await RandomQuote();
         if (embed.Title is not null)
         {
             await ctx.Channel.SendMessageAsync(embed);
         }
-        return true;
     }
 
     [Command("stats")]
-    private async Task<bool> HandleStats(CommandContext ctx, string? data)
+    private async Task HandleStats(CommandContext ctx, [RemainingText] string? data = null)
     {
         DiscordEmbed stats;
         int? leaderboardLength = int.TryParse(data, out int num) ? num : null;
@@ -45,12 +44,11 @@ public partial class QuoteCommands
             stats = await QuoteLeaderboard(leaderboardLength.Value);
         }
         await ctx.Channel.SendMessageAsync(stats);
-        return true;
     }
 
     [Command("delete")]
     [TextAlias("remove")]
-    private async Task<bool> HandleDelete(CommandContext ctx, string target)
+    private async Task HandleDelete(CommandContext ctx, string target)
     {
         if (long.TryParse(target, out long quoteToRemove) && ctx.Guild is not null)
         {
@@ -62,7 +60,7 @@ public partial class QuoteCommands
                 if (quote is null)
                 {
                     await ctx.Channel.SendMessageAsync("Quote not found");
-                    return false;
+                    return;
                 }
                 var message = await ctx.Channel.GetMessageAsync(quote.messageId);
                 var user = await ctx.Guild.GetMemberAsync(AEOTS_SERVER_ID);
@@ -80,11 +78,10 @@ public partial class QuoteCommands
                 await ctx.Channel.SendMessageAsync($"Quote {quoteToRemove} not found");
             }
         }
-        return true;
     }
 
     [Command("latest")]
-    private async Task<bool> HandleLatest(CommandContext ctx)
+    private async Task HandleLatest(CommandContext ctx)
     {
         Quote? newestQuote = Program.Database?.Quotes.AsNoTracking()
             .OrderByDescending(q => q.dateTime)
@@ -94,12 +91,17 @@ public partial class QuoteCommands
 
         DiscordEmbed latestEmbed = await QuoteEmbed(newestQuote?.id ?? Program.maxQuoteId);
         await ctx.Channel.SendMessageAsync(latestEmbed);
-        return true;
     }
 
-    [Command("quote")] // name matches group so acts as a fallback
-    private async Task HandleDirectArgs(TextCommandContext context, [RemainingText] string arg)
+    [Command("default")]
+    [DefaultGroupCommand]
+    private async Task HandleDirectArgs(TextCommandContext context, [RemainingText] string? arg = null)
     {
+        if (string.IsNullOrWhiteSpace(arg))
+        {
+            await HandleRandom(context);
+            return;
+        }
         var cmdargs = arg.Split(" ");
         // if its a number we want to fetch that quote
         if (int.TryParse(cmdargs[0], out int id))

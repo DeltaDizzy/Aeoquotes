@@ -14,9 +14,6 @@ internal class Program
 {
     static List<Quote> quotes = [];
     public static long maxQuoteId = 0;
-
-    private static bool JR = true;
-
     public static QuotesContext? Database {get; private set;}
     public static string emojiName = ":thought_balloon:";
     public static List<DiscordMember> Members {get; private set;} = [];
@@ -106,7 +103,7 @@ internal class Program
             extension.AddCommands([typeof(QuoteCommands)/*, typeof(HelpCommands)*/]);
             TextCommandProcessor textCommandProcessor = new(new()
             {
-               PrefixResolver = new DefaultPrefixResolver(true, JR ? "&" : "!").ResolvePrefixAsync 
+               PrefixResolver = new DefaultPrefixResolver(true, "!").ResolvePrefixAsync 
             });
             extension.AddProcessor(textCommandProcessor);
         }, new CommandsConfiguration()
