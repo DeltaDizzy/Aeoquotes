@@ -1,60 +1,23 @@
 using System.Text;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Commands;
+using DSharpPlus.Commands.ArgumentModifiers;
+using DSharpPlus.Commands.Processors.TextCommands;
+using DSharpPlus.Commands.Trees.Metadata;
 using DSharpPlus.Entities;
 using log4net;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aeoquotes.Commands;
 
-public class QuoteCommands : BaseCommandModule
+[Command("quote")]
+[TextAlias("q")]
+public partial class QuoteCommands
 {
     private static readonly ulong AEOTS_SERVER_ID = 1503994723118088292;
     private static readonly ILog Logger = LogManager.GetLogger(typeof(QuoteCommands));
-    #region Command Tasks
 
-    [Command("q")]
-    public async Task Q(CommandContext ctx, [RemainingText] string args)
-    {
-        Logger.Debug("q invoked");
-        await Quote(ctx, args);
-    }
-
-    [Command("quote")]
-    public async Task Quote(CommandContext ctx, [RemainingText] string args)
-    {
-        StringBuilder argsB = new();
-        args ??= "";
-        var cmdargs = args.Split(" ");
-        foreach (var item in cmdargs)
-        {
-            argsB.Append($" {item} ");
-        }
-        Logger.Info($"Command `quote` invoked with args: {argsB}");
-        // are we asking for a certain quote or a subcommand?
-        if (int.TryParse(cmdargs[0], out int id))
-        {
-            Logger.Info($"quoting by number: {id}");
-            DiscordEmbed quote = await QuoteEmbed(id);
-            await ctx.Channel.SendMessageAsync(quote);
-        } 
-        else
-        {
-            _ = cmdargs[0] switch
-            {
-                "" => HandleRandom(ctx),
-                "stats" => HandleStats(ctx, cmdargs.Length >= 2 ? cmdargs[1] : null),
-                "remove" or "delete" => HandleDelete(ctx, cmdargs[1]),
-                "latest" => HandleLatest(ctx),
-                string s => HandleUsernameOrInvalid(ctx, args)
-
-            };
-        }
-    }
-#endregion
-
-#region Subcommand Handlers
-
+    [Command("random")]
+    [TextAlias("")]
     private async Task<bool> HandleRandom(CommandContext ctx)
     {
         DiscordEmbed embed = await RandomQuote();
@@ -65,6 +28,7 @@ public class QuoteCommands : BaseCommandModule
         return true;
     }
 
+    [Command("stats")]
     private async Task<bool> HandleStats(CommandContext ctx, string? data)
     {
         DiscordEmbed stats;
@@ -84,9 +48,11 @@ public class QuoteCommands : BaseCommandModule
         return true;
     }
 
+    [Command("delete")]
+    [TextAlias("remove")]
     private async Task<bool> HandleDelete(CommandContext ctx, string target)
     {
-        if (long.TryParse(target, out long quoteToRemove))
+        if (long.TryParse(target, out long quoteToRemove) && ctx.Guild is not null)
         {
             if (Program.GetQuotes().Count <= quoteToRemove && quoteToRemove > 0)
             {
@@ -117,6 +83,7 @@ public class QuoteCommands : BaseCommandModule
         return true;
     }
 
+    [Command("latest")]
     private async Task<bool> HandleLatest(CommandContext ctx)
     {
         Quote? newestQuote = Program.Database?.Quotes.AsNoTracking()
@@ -129,6 +96,25 @@ public class QuoteCommands : BaseCommandModule
         await ctx.Channel.SendMessageAsync(latestEmbed);
         return true;
     }
+
+    [Command("quote")] // name matches group so acts as a fallback
+    private async Task HandleDirectArgs(TextCommandContext context, [RemainingText] string arg)
+    {
+        var cmdargs = arg.Split(" ");
+        // if its a number we want to fetch that quote
+        if (int.TryParse(cmdargs[0], out int id))
+        {
+            Logger.Info($"quoting by number: {id}");
+            DiscordEmbed quote = await QuoteEmbed(id);
+            await context.Channel.SendMessageAsync(quote);
+        }
+        else
+        {
+            // username or invalid arg
+            await HandleUsernameOrInvalid(context, arg);
+        }
+    }
+
 
     private async Task<bool> HandleUsernameOrInvalid(CommandContext ctx, string arg)
     {
@@ -208,93 +194,4 @@ public class QuoteCommands : BaseCommandModule
             return Program.GetQuotes().Find(q => q.nick.ToLowerInvariant().Equals(username))?.userId;
         } else throw new NameScenarioInvalidException("No record of this user found in the quote db", NameScenario.ZeroCount, NameType.Nickname);
     }
-#endregion
-
-#region Embed/Response Generators
-    static async Task<DiscordEmbed> QuoteLeaderboard(int? leaderboardLength)
-    {
-        var quotes = Program.GetQuotes();
-        var topQuotes = quotes.CountBy(q => q.userId).OrderByDescending(kvp => kvp.Value).Take(leaderboardLength ?? 25).ToList();
-        DiscordEmbedBuilder embedBuilder = new DiscordEmbedBuilder();
-        StringBuilder listBuilder = new();
-        for (int i = 0; i < topQuotes.Count; i++)
-        {
-            listBuilder.Append($"{i + 1}. <@{topQuotes[i].Key}> ({topQuotes[i].Value} quotes)\n");
-        }
-        embedBuilder.WithDescription($"Total Quotes: {quotes.Count}\n\n{listBuilder}");
-        return embedBuilder.Build();
-    }
-
-    static async Task<DiscordEmbed> QuoteEmbed(long id)
-    {
-        if (id > 0 && id <= Program.maxQuoteId)
-        {
-            Quote? quote = Program.GetQuotes().Find(q => q.id == id);
-
-            if(quote is null)
-            {
-                return new DiscordEmbedBuilder()
-                {
-                    Title = $"#{id} - Error",
-                    Description = "**QUOTE IS NULL**"
-                };
-            }
-
-            DiscordEmbedBuilder embedBuilder = new();
-            StringBuilder listBuilder = new();
-            embedBuilder.Title = $"#{quote?.id}";
-            StringBuilder descBuilder = new();
-            descBuilder.Append(quote?.text + "\n");
-            descBuilder.Append($"* <@{quote?.userId}> [(Jump)](https://discordapp.com/channels/{quote?.server}/{quote?.channelId}/{quote?.messageId})");
-            embedBuilder.Description = descBuilder.ToString();
-            embedBuilder.WithTimestamp(quote?.dateTime.ToUniversalTime());
-            return embedBuilder.Build();
-        }
-        else
-        {
-            return new DiscordEmbedBuilder()
-            {
-                Title = $"{id} is not in the valid quote id range!"
-            }.Build();
-        }
-    }
-
-    static async Task<long> UsernameQuote(ulong userId)
-    {
-        // is this a valid name
-        // get all quotes by them
-        var quotesByUser = Program.GetQuotes().Where(q => q.userId == userId);
-        if (!quotesByUser.Any())
-        {
-            return -1;
-        }
-        // they have quotes, so pick a random one
-        Random rng = new(DateTime.Now.Microsecond);
-        var quoteIndex = rng.NextInt64(quotesByUser.Count());
-        // get id of this quote
-        // first sort by id
-        var sortedQuotes = quotesByUser.OrderBy(q => q.id).ToList();
-        // then pull the quote id
-        return sortedQuotes[(int)quoteIndex].id;
-    }
-
-    static async Task<DiscordEmbed> RandomQuote()
-    {
-        Random rng = new(DateTime.Now.Microsecond);
-        var quotes = Program.GetQuotes();
-        var ids = quotes.Select(q => q.id);
-        var tries = 0;
-        if (quotes.Count > 0)
-        {
-            long id;
-            do {
-                id = rng.NextInt64(quotes.Max(q => q.id) + 1);
-                tries++;
-            } while (!ids.Contains(id));
-            Logger.Info($"Random quote selected. Id={id}. {tries} tries needed.");
-            return await QuoteEmbed(id);
-        }
-        return await QuoteEmbed(-1);
-    }
-#endregion
 }

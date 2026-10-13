@@ -1,10 +1,12 @@
 ﻿using System.Text;
 using DSharpPlus;
-using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using log4net;
 using log4net.Config;
 using Aeoquotes.Commands;
+using DSharpPlus.Commands;
+using DSharpPlus.Commands.Processors.TextCommands;
+using DSharpPlus.Commands.Processors.TextCommands.Parsing;
 
 namespace Aeoquotes;
 
@@ -12,6 +14,9 @@ internal class Program
 {
     static List<Quote> quotes = [];
     public static long maxQuoteId = 0;
+
+    private static bool JR = true;
+
     public static QuotesContext? Database {get; private set;}
     public static string emojiName = ":thought_balloon:";
     public static List<DiscordMember> Members {get; private set;} = [];
@@ -95,15 +100,19 @@ internal class Program
                 Members.Add(args.Member);
             });
         });
-        builder = builder.UseCommandsNext((cnb) =>
+
+        builder.UseCommands((IServiceProvider serviceProvider, CommandsExtension extension) =>
+        {
+            extension.AddCommands([typeof(QuoteCommands)/*, typeof(HelpCommands)*/]);
+            TextCommandProcessor textCommandProcessor = new(new()
             {
-                cnb.RegisterCommands<QuoteCommands>();
-            }, 
-            new CommandsNextConfiguration()
-            {
-                StringPrefixes = ["!"]
-            }
-        );
+               PrefixResolver = new DefaultPrefixResolver(true, JR ? "&" : "!").ResolvePrefixAsync 
+            });
+            extension.AddProcessor(textCommandProcessor);
+        }, new CommandsConfiguration()
+        {
+            RegisterDefaultCommandProcessors = true
+        });
 
         DiscordClient discord = builder.Build();
         DiscordActivity status = new("the quotathon", DiscordActivityType.Watching);
