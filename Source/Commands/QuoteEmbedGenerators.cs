@@ -71,6 +71,33 @@ public partial class QuoteCommands
         }
     }
 
+    static async Task<DiscordEmbed> QuoteByEmbed(string target)
+    {
+        List<Quote> quotes = Program.GetQuotes().FindAll(q => q.quoterId == TargetUserIdFromName(target));
+        Random rng = new();
+
+        Quote quote = quotes[(int)rng.NextInt64(quotes.Count)];
+
+        if(quote is null)
+        {
+            return new DiscordEmbedBuilder()
+            {
+                Title = $"#{target} - Error",
+                Description = "**No Quote Found**"
+            };
+        }
+
+        DiscordEmbedBuilder embedBuilder = new();
+        StringBuilder listBuilder = new();
+        embedBuilder.Title = $"#{quote?.id}";
+        StringBuilder descBuilder = new();
+        descBuilder.Append(quote?.text + "\n");
+        descBuilder.Append($"* <@{quote?.userId}> [(Jump)](https://discordapp.com/channels/{quote?.server}/{quote?.channelId}/{quote?.messageId})");
+        embedBuilder.Description = descBuilder.ToString();
+        embedBuilder.WithTimestamp(quote?.dateTime.ToUniversalTime());
+        return embedBuilder.Build();
+    }
+
     static async Task<long> UsernameQuote(ulong userId)
     {
         // is this a valid name

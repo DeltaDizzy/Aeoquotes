@@ -85,7 +85,7 @@ public partial class QuoteCommands
             .OrderByDescending(q => q.id)
             .FirstOrDefault();
 
-        Logger.Info($"Latest Quote: maxQuoteId = {Program.maxQuoteId}. Actual newest = {(newestQuote?.id.ToString() ?? "null")}");
+        Logger.Info($"Latest Quote: maxQuoteId = {Program.maxQuoteId}. Actual newest = {newestQuote?.id.ToString() ?? "null"}");
 
         DiscordEmbed latestEmbed = await QuoteEmbed(newestQuote?.id ?? Program.maxQuoteId);
         await ctx.Channel.SendMessageAsync(latestEmbed);
@@ -93,7 +93,7 @@ public partial class QuoteCommands
 
     [Command("default")]
     [DefaultGroupCommand]
-    private async Task HandleDirectArgs(TextCommandContext context, [RemainingText] string? arg = null)
+    private async Task HandleDirectArgs(CommandContext context, [RemainingText] string? arg = null)
     {
         if (string.IsNullOrWhiteSpace(arg))
         {
@@ -115,15 +115,26 @@ public partial class QuoteCommands
         }
     }
 
+    //[Command("by")]
+    [Description("Returns a quote that was quoted by the given user")]
+    private async Task QuotedBy(CommandContext context, string target)
+    {
+        DiscordEmbed embed = await QuoteByEmbed(target);
+        await context.Channel.SendMessageAsync(embed);
+    }
+
 
     private async Task<bool> HandleUsernameOrInvalid(CommandContext ctx, string arg)
     {
         Logger.Info($"quoting by username {arg}");
         var name = arg.ToLowerInvariant();
-
         ulong? targetUserId = 0;
         try
         {
+            if (name is "me")
+            {
+                name = ctx.Member?.Username;
+            }
             targetUserId = TargetUserIdFromName(name);
         }
         catch (InvalidOperationException ioe)
@@ -137,6 +148,13 @@ public partial class QuoteCommands
         {
             Logger.Error(nsi.Message);
             Logger.Error(nsi.StackTrace ?? "NameScenarioInvalidException StackTrace Null");
+            await ctx.Channel.SendMessageAsync("User not found");
+            return false;  
+        }
+        catch (NullReferenceException nre)
+        {
+            Logger.Error(nre.Message);
+            Logger.Error(nre.StackTrace ?? "NullReferenceException StackTrace Null");
             await ctx.Channel.SendMessageAsync("User not found");
             return false;
         }

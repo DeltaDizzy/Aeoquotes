@@ -26,7 +26,7 @@ public partial class QuoteCommands
         };
     }
 
-    private ulong? TargetUserIdFromName(string name)
+    private static ulong? TargetUserIdFromName(string name)
     {
         // check nickname, then display name, then username
         // 3 case: nobody with this nickname, one person with this nickname, multiple people with this nickname
@@ -50,7 +50,7 @@ public partial class QuoteCommands
         return targetUserId;
     }
 
-    private ulong? TryGetUserIdFromQuoteList(string username)
+    private static ulong? TryGetUserIdFromQuoteList(string username)
     {
         // look through quotes to see if any attached nicknames match our target username
         bool quotesHaveName = Program.GetQuotes().Any(q => q.nick.ToLowerInvariant().Equals(username));
