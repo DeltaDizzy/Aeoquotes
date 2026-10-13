@@ -6,17 +6,29 @@ namespace Aeoquotes.Commands;
 
 public partial class QuoteCommands
 {
-        static async Task<DiscordEmbed> QuoteLeaderboard(int? leaderboardLength)
+    protected enum LeaderboardType
     {
+        Quotee,
+        Quoter
+    }
+    static async Task<DiscordEmbed> QuoteLeaderboard(int leaderboardLength, LeaderboardType leaderboardType)
+    {
+        DiscordEmbedBuilder embedBuilder = new();
         var quotes = Program.GetQuotes();
-        var topQuotes = quotes.CountBy(q => q.userId).OrderByDescending(kvp => kvp.Value).Take(leaderboardLength ?? 25).ToList();
-        DiscordEmbedBuilder embedBuilder = new DiscordEmbedBuilder();
         StringBuilder listBuilder = new();
+        var topQuotes = leaderboardType switch
+        {
+            LeaderboardType.Quotee => quotes.CountBy(q => q.userId).OrderByDescending(kvp => kvp.Value).Take(leaderboardLength).ToList(),
+            LeaderboardType.Quoter => quotes.CountBy(q => q.quoterId).OrderByDescending(kvp => kvp.Value).Take(leaderboardLength).ToList(),
+            _ => []
+        };
+        
         for (int i = 0; i < topQuotes.Count; i++)
         {
             listBuilder.Append($"{i + 1}. <@{topQuotes[i].Key}> ({topQuotes[i].Value} quotes)\n");
         }
-        embedBuilder.WithDescription($"Total Quotes: {quotes.Count}\n\n{listBuilder}");
+        embedBuilder.WithFooter($"Total Quotes: {quotes.Count}\n\n{listBuilder}");
+        embedBuilder.WithDescription($"## Top {leaderboardLength} {(leaderboardType is LeaderboardType.Quotee ? "quoted users" : "quoters")}");
         return embedBuilder.Build();
     }
 

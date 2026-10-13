@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text;
 using DSharpPlus.Commands;
 using DSharpPlus.Commands.ArgumentModifiers;
@@ -30,18 +31,23 @@ public partial class QuoteCommands
     private async Task HandleStats(CommandContext ctx, [RemainingText] string? data = null)
     {
         DiscordEmbed stats;
-        int? leaderboardLength = int.TryParse(data, out int num) ? num : null;
-        // no number after, user stats or base leaderboard
-        if (leaderboardLength is null)
+        int leaderboardLength;
+        if (data is null)
         {
-            Logger.Info($"Generating leaderboard, length=25");
-            stats = await QuoteLeaderboard(leaderboardLength);
-        } 
+            leaderboardLength = 25;   
+        }
         else
         {
-            Logger.Info($"Generating leaderboard, length={leaderboardLength}");
-            stats = await QuoteLeaderboard(leaderboardLength.Value);
+            leaderboardLength = data.Split(" ").Select(s => int.TryParse(s, out int n) ? n : 25).FirstOrDefault(25);
         }
+        if (data.Split(" ").ContainsAny("quoters", "quoter"))
+        {
+            Logger.Info($"Generating quoter leaderboard, length={leaderboardLength}");
+            stats = await QuoteLeaderboard(leaderboardLength, LeaderboardType.Quoter);
+        }
+        // no number after, user stats or base leaderboard
+        Logger.Info($"Generating quotee leaderboard, length={leaderboardLength}");
+        stats = await QuoteLeaderboard(leaderboardLength, LeaderboardType.Quotee);
         await ctx.Channel.SendMessageAsync(stats);
     }
 
