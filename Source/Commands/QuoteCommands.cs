@@ -17,7 +17,6 @@ public partial class QuoteCommands
     private static readonly ILog Logger = LogManager.GetLogger(typeof(QuoteCommands));
 
     [Command("random")]
-    [DefaultGroupCommand]
     private async Task HandleRandom(CommandContext ctx)
     {
         DiscordEmbed embed = await RandomQuote();
