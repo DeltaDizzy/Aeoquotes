@@ -83,7 +83,7 @@ public partial class QuoteCommands
     private async Task HandleLatest(CommandContext ctx)
     {
         Quote? newestQuote = Program.Database?.Quotes.AsNoTracking()
-            .OrderByDescending(q => q.dateTime)
+            .OrderByDescending(q => q.id)
             .FirstOrDefault();
 
         Logger.Info($"Latest Quote: maxQuoteId = {Program.maxQuoteId}. Actual newest = {(newestQuote?.id.ToString() ?? "null")}");
