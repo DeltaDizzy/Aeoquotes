@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02613" />
-    <PackageReference Include="DSharpPlus.CommandsNext" Version="5.0.0-nightly-02613" />
+    <PackageReference Include="DSharpPlus.Commands" Version="5.0.0-nightly-02613" />
     <PackageReference Include="log4net" Version="3.5.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
