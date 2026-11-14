@@ -1,0 +1,7 @@
+bin/
+obj/
+.git/
+.vscode/
+token.txt
+maintoken.txt
+Database/*.db
