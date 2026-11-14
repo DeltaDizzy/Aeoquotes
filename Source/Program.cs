@@ -33,7 +33,12 @@ internal class Program
         maxQuoteId = quotes.Max(q => q.id);
         Logger.Info($"Loaded {db.Quotes.Count()} quotes successfully");
 
-        DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(File.ReadAllText($"{GetProjectRoot()}/token.txt"), DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents | DiscordIntents.GuildMembers);
+        string token = Environment.GetEnvironmentVariable("DISCORD_TOKEN")
+            ?? (File.Exists($"{GetProjectRoot()}/token.txt")
+                ? File.ReadAllText($"{GetProjectRoot()}/token.txt").Trim()
+                : throw new InvalidOperationException("No token found in DISCORD_TOKEN or token.txt"));
+
+        DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(token, DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents | DiscordIntents.GuildMembers);
         builder.ConfigureEventHandlers((handler) =>
         {
             handler.HandleMessageReactionAdded(async (client, args) =>

@@ -1,0 +1,24 @@
+[Unit]
+Description = Aeoquotes Discord Bot
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+TimeoutStartSec=0
+
+# clean up stale containers
+ExecStartPre=-/usr/bin/docker stop aeoquotes
+ExecStartPre=-/usr/bin/docker rm aeoquotes
+ExecStart=/usr/bin/docker run --name aeoquotes \
+  --rm \
+  --env-file /etc/aeoquotes.env \
+  -v /var/lib/aeoquotes/Database:/app/Database \
+  aeoquotes:latest
+
+ExecStop=/usr/bin/docker stop -t 10 aeoquotes
+
+[Install]
+WantedBy=multi-user.target
