@@ -7,6 +7,7 @@ using Aeoquotes.Commands;
 using DSharpPlus.Commands;
 using DSharpPlus.Commands.Processors.TextCommands;
 using DSharpPlus.Commands.Processors.TextCommands.Parsing;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aeoquotes;
 
@@ -27,6 +28,7 @@ internal class Program
         XmlConfigurator.Configure(new FileInfo($"{GetProjectRoot()}/log4netconfig.xml"));        
         
         using QuotesContext db = new();
+        db.Database.Migrate();
         Database = db;
         Logger.Info($"Database connected: {db.Quotes.Any()}");
         quotes = [.. db.Quotes];

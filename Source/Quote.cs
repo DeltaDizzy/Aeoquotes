@@ -12,5 +12,6 @@ public record Quote(
     long unixTime, 
     DateTime dateTime,
     string quoterUsername = "",
-    ulong quoterId = 0
+    ulong quoterId = 0,
+    string? imageFileName = null
 );
